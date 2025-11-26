@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sopilot v3.0 - Agent Edition</title>
+  <style id="theme-style">
+/* --- Variables and Global Styles --- */
+:root {
+  /* Color Palette - Group logically */
+  --color-primary-dark: rgb(2, 8, 20);
+  --color-primary-light: rgb(12, 31, 53);
+  --color-accent-blue: rgb(0, 255, 224); /* Main text color */
+
+  --color-header-dark: rgb(17, 26, 39);
+  --color-header-border: rgb(70, 130, 180);
+  --color-header-text: rgb(135, 206, 250);
+
+  --color-form-bg: rgb(14, 21, 37);
+  --color-input-bg: rgb(27, 38, 59);
+  --color-input-text: rgb(208, 250, 255);
+  --color-input-placeholder: lime; /* Ensure sufficient contrast */
+
+  --color-user-msg-bg-start: royalblue;
+  --color-user-msg-bg-end: deepskyblue;
+  --color-user-msg-text: black;
+
+  --color-assistant-msg-bg-start: rgb(22, 60, 100);
+  --color-assistant-msg-bg-end: rgb(35, 75, 120);
+  --color-assistant-msg-text: var(--color-accent-blue);
+  
+  --color-error: rgb(255, 99, 71);
+  --color-success: rgb(50, 205, 50);
+
+  /* Fonts */
+  --font-family-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+}
+
+/* Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family-sans);
+}
+
+body {
+  background-color: var(--color-primary-dark);
+  color: var(--color-header-text);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* --- Header and Utility --- */
+#header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: var(--color-header-dark);
+  border-bottom: 2px solid var(--color-header-border);
+  flex-shrink: 0;
+}
+
+#title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-accent-blue);
+  text-shadow: 0 0 5px rgba(0, 255, 224, 0.5);
+}
+
+#utility-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.header-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-header-text);
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.header-btn:hover {
+  background-color: var(--color-primary-light);
+  color: var(--color-accent-blue);
+}
+
+.header-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* --- Chat Container --- */
+#chat-container {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 15px;
+  scroll-behavior: smooth;
+  position: relative;
+}
+
+.message {
+  margin-bottom: 15px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  max-width: 90%;
+  word-wrap: break-word;
+  position: relative;
+}
+
+.user-message {
+  align-self: flex-end;
+  margin-left: auto;
+  background-image: linear-gradient(to right, var(--color-user-msg-bg-start), var(--color-user-msg-bg-end));
+  color: var(--color-user-msg-text);
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.assistant-message {
+  align-self: flex-start;
+  margin-right: auto;
+  background-image: linear-gradient(to right, var(--color-assistant-msg-bg-start), var(--color-assistant-msg-bg-end));
+  color: var(--color-assistant-msg-text);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.message-content h5 {
+  font-size: 0.8rem;
+  font-weight: 400;
+  opacity: 0.7;
+  margin-bottom: 5px;
+}
+
+.message pre {
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 10px;
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.message code {
+  font-family: monospace;
+}
+
+/* Markdown formatting improvements */
+.assistant-message p, .assistant-message ul, .assistant-message ol, .assistant-message table {
+    margin-top: 10px;
+}
+.assistant-message h1, .assistant-message h2, .assistant-message h3 {
+    font-weight: bold;
+    margin-top: 15px;
+    color: var(--color-accent-blue);
+}
+.assistant-message li {
+    margin-left: 20px;
+    list-style-type: disc;
+}
+.assistant-message li > p {
+    display: inline;
+}
+
+/* Typing Indicator */
+#typing-indicator {
+  padding: 10px 18px;
+  margin-bottom: 15px;
+  border-radius: 12px;
+  background-color: var(--color-assistant-msg-bg-start);
+  color: var(--color-accent-blue);
+  width: fit-content;
+  font-style: italic;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-accent-blue);
+  border-radius: 50%;
+  margin-left: 4px;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+.dot:nth-child(1) { animation-delay: -0.32s; }
+.dot:nth-child(2) { animation-delay: -0.16s; }
+.dot:nth-child(3) { animation-delay: 0s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1.0); }
+}
+
+/* --- Input Area --- */
+#input-area {
+  flex-shrink: 0;
+  padding: 15px;
+  background-color: var(--color-form-bg);
+  border-top: 2px solid var(--color-header-border);
+}
+
+#message-form {
+  display: flex;
+  gap: 10px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+#user-input {
+  flex-grow: 1;
+  padding: 12px 15px;
+  border-radius: 25px;
+  border: 1px solid var(--color-header-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-input-text);
+  resize: none;
+  overflow-y: hidden;
+  max-height: 150px;
+  transition: border-color 0.2s;
+}
+
+#user-input::placeholder {
+  color: var(--color-input-placeholder);
+  opacity: 0.7;
+}
+
+#user-input:focus {
+  outline: none;
+  border-color: var(--color-accent-blue);
+}
+
+#send-btn, .button-primary {
+  padding: 12px 25px;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: bold;
+  background-image: linear-gradient(45deg, var(--color-accent-blue), var(--color-header-text));
+  color: var(--color-primary-dark);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+#send-btn:hover, .button-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.5);
+}
+
+#send-btn:disabled {
+  background-image: none;
+  background-color: #555;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* --- Chat List Modal (General Modal Styles) --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85); /* Darker overlay */
+    z-index: 1000; /* Ensure it's on top */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.3s ease;
+}
+
+.modal-content {
+    background-color: var(--color-primary-dark);
+    border: 2px solid var(--color-accent-blue);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 255, 224, 0.2);
+    width: 90%;
+    max-width: 900px; /* Wider modal for agent management */
+    max-height: 90%;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-content h2 button {
+    cursor: pointer;
+    color: var(--color-header-text);
+    background: none;
+    border: none;
+    font-size: 2rem;
+    line-height: 1;
+}
+
+/* Agent Specific Styles */
+.agent-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    background-color: var(--color-primary-light);
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.agent-item:hover {
+    border-color: var(--color-accent-blue);
+}
+
+.agent-item.active {
+    background-color: var(--color-accent-blue);
+    color: var(--color-primary-dark);
+    font-weight: bold;
+}
+
+.agent-item button {
+    background: none;
+    border: none;
+    color: var(--color-header-text);
+    margin-left: 10px;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.agent-item.active button {
+    color: var(--color-primary-dark);
+}
+
+.agent-item button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* General Input/Button Styles for Modals */
+.input-field {
+    background-color: var(--color-input-bg);
+    color: var(--color-input-text);
+    border: 1px solid var(--color-header-border);
+    padding: 10px;
+    border-radius: 8px;
+    transition: border-color 0.2s;
+}
+.input-field:focus {
+    outline: none;
+    border-color: var(--color-accent-blue);
+}
+
+.button-secondary {
+    background-color: var(--color-input-bg);
+    color: var(--color-accent-blue);
+    border: 1px solid var(--color-accent-blue);
+    padding: 12px 25px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.button-secondary:hover {
+    background-color: rgba(0, 255, 224, 0.1);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Chat List Modal Specific */
+#chat-list-modal .modal-content {
+    max-width: 400px;
+    max-height: 80%;
+}
+#chat-list-container {
+    overflow-y: auto;
+    max-height: 400px;
+}
+.chat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    background-color: var(--color-primary-light);
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+.chat-item:hover {
+    border-color: var(--color-accent-blue);
+}
+.chat-item.active {
+    background-color: var(--color-accent-blue);
+    color: var(--color-primary-dark);
+    font-weight: bold;
+}
+.chat-item button {
+    background: none;
+    border: none;
+    color: var(--color-header-text);
+    margin-left: 10px;
+    padding: 5px;
+    border-radius: 4px;
+}
+.chat-item.active button {
+    color: var(--color-primary-dark);
+}
+.chat-item button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  #title {
+    font-size: 1.2rem;
+  }
+  .message {
+    max-width: 95%;
+    padding: 10px 14px;
+  }
+  #message-form {
+    flex-direction: column;
+  }
+  #send-btn, .button-primary, .button-secondary {
+    width: 100%;
+    margin-top: 5px;
+  }
+  
+  /* Agent Modal Responsive */
+  #agents-modal .modal-content {
+      padding: 15px;
+  }
+  #agents-modal .modal-content > div { /* Flex container for lists/form */
+      flex-direction: column;
+      height: auto;
+  }
+  #agent-instruction {
+      min-height: 100px;
+  }
+}
+  </style>
+</head>
+<body>
+
+  <header id="header">
+    <div id="title">Sopilot v3.0</div>
+    <div id="utility-bar">
+      <!-- New Agent Management Button -->
+      <button id="open-agents-btn" title="Manage AI Agents" class="header-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </button>
+
+      <!-- Chat List Button -->
+      <button id="open-chats-btn" title="Open Chat List" class="header-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      </button>
+      
+      <!-- Theme Toggle Button -->
+      <button id="theme-toggle-btn" title="Toggle Theme" class="header-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="chat-container">
+    <!-- Chat messages will be appended here -->
+    <div id="typing-indicator" class="flex items-center">
+        <span>Assistant is thinking</span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    </div>
+  </main>
+
+  <div id="input-area">
+    <form id="message-form">
+      <textarea id="user-input" placeholder="Type your message here..." rows="1"></textarea>
+      <button id="send-btn" type="submit">Send</button>
+    </form>
+  </div>
+  
+  <!-- Chat List Modal -->
+  <div id="chat-list-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <h2 class="text-xl font-bold mb-4 flex justify-between items-center">
+            Chats
+            <button id="close-chats-modal" class="text-3xl leading-none">&times;</button>
+        </h2>
+        <div id="chat-list-container" class="mb-4">
+            <!-- Chat items loaded here -->
+        </div>
+        <div class="flex gap-2">
+            <button id="new-chat-btn" class="button-primary flex-1">Start New Chat</button>
+            <button id="clear-all-chats-btn" class="button-secondary flex-1">Clear All Chats</button>
+        </div>
+    </div>
+  </div>
+
+  <!-- Agent Management Modal -->
+  <div id="agents-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+          <h2 class="text-xl font-bold mb-4 flex justify-between items-center">
+              AI Agent Management
+              <button id="close-agents-modal">&times;</button>
+          </h2>
+          
+          <!-- Current Agent Display -->
+          <div id="selected-agent-info" style="padding: 10px; margin-bottom: 15px; border-radius: 8px; border: 2px solid rgba(0, 255, 224, 0.5); background-color: var(--color-form-bg);">
+              <p style="font-weight: 600; color: var(--color-accent-blue); font-size: 0.9rem;">Active Agent:</p>
+              <p id="current-agent-name" style="margin-top: 4px; font-size: 1.1rem; color: var(--color-input-text);">Default (No System Instruction)</p>
+          </div>
+
+          <!-- Agents List and New Agent Form Container -->
+          <div class="flex flex-col md:flex-row gap-4 flex-grow" style="max-height: 60vh;">
+              <!-- Agent List (Left) -->
+              <div style="flex: 1; background-color: var(--color-input-bg); padding: 15px; border-radius: 12px; overflow-y: auto;">
+                  <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 10px;">Saved Agents</h3>
+                  <div id="agents-list">
+                      <!-- Agents will be dynamically loaded here -->
+                  </div>
+              </div>
+
+              <!-- New Agent Form (Right) -->
+              <div style="flex: 1; background-color: var(--color-input-bg); padding: 15px; border-radius: 12px; display: flex; flex-direction: column;">
+                  <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 10px;">Create/Edit Agent</h3>
+                  <form id="agent-form" style="display: flex; flex-direction: column; flex-grow: 1;">
+                      <input type="hidden" id="agent-id">
+                      <label for="agent-name" style="display: block; font-size: 0.9rem; margin-bottom: 5px;">Agent Name</label>
+                      <input type="text" id="agent-name" required placeholder="e.g., Python Expert" class="input-field mb-3 p-2 rounded">
+                      
+                      <label for="agent-instruction" style="display: block; font-size: 0.9rem; margin-bottom: 5px;">System Instruction</label>
+                      <textarea id="agent-instruction" required placeholder="Act as a verbose, senior Python developer who only responds with code and explanations." class="input-field flex-grow resize-none p-2 rounded mb-3" style="min-height: 150px;"></textarea>
+                      
+                      <div style="display: flex; gap: 8px; margin-top: auto;">
+                          <button type="submit" id="save-agent-btn" class="button-primary" style="flex: 1;">Save Agent</button>
+                          <button type="button" id="clear-agent-form" class="button-secondary" style="flex: 1;">New Agent / Clear Form</button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      </div>
+  </div>
+  
+  <!-- Message Box for non-alert notifications -->
+  <div id="message-box" style="position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.8); color: var(--color-accent-blue); padding: 10px 20px; border-radius: 8px; z-index: 1001; opacity: 0; transition: opacity 0.5s; pointer-events: none;"></div>
+
+
+  <script type="module">
+    // --- Global Variables and Constants ---
+    const apiKey = "AIzaSyAC5a5LU9GWYV6t8zGfTC6qf4WYOBQLD3c";
+    // Base URL is only needed for context, but the fetch URL must include the model and key for this environment
+    const modelName = 'gemini-2.0-flash';
+    
+    let isWaitingForResponse = false;
+    let currentChatId = localStorage.getItem('currentChatId') || crypto.randomUUID();
+    let chatHistory = [];
+    let chats = JSON.parse(localStorage.getItem('chats') || '{}');
+    let currentAgentId = localStorage.getItem('selectedAgentId') || 'default';
+
+
+    // --- DOM Elements ---
+    const chatContainer = document.getElementById('chat-container');
+    const userInput = document.getElementById('user-input');
+    const messageForm = document.getElementById('message-form');
+    const sendBtn = document.getElementById('send-btn');
+    const typingIndicator = document.getElementById('typing-indicator');
+
+    // Chat Modal Elements
+    const chatListModal = document.getElementById('chat-list-modal');
+    const openChatsBtn = document.getElementById('open-chats-btn');
+    const closeChatsBtn = document.getElementById('close-chats-modal');
+    const chatListContainer = document.getElementById('chat-list-container');
+    const newChatBtn = document.getElementById('new-chat-btn');
+    const clearAllChatsBtn = document.getElementById('clear-all-chats-btn');
+
+    // Agent Modal Elements
+    const agentsModal = document.getElementById('agents-modal');
+    const openAgentsBtn = document.getElementById('open-agents-btn');
+    const closeAgentsModalBtn = document.getElementById('close-agents-modal');
+    const agentForm = document.getElementById('agent-form');
+    const clearAgentFormBtn = document.getElementById('clear-agent-form');
+    // Agent helper functions are defined below
+
+    // --- Utility Functions ---
+
+    /**
+     * Converts a string with Markdown into HTML. Basic implementation.
+     * @param {string} markdownText
+     * @returns {string} HTML formatted text
+     */
+    function markdownToHtml(markdownText) {
+        let html = markdownText || '';
+
+        // Code blocks (must be first)
+        html = html.replace(/```(\w+)?\n([\s\S]+?)```/g, (match, lang, code) => {
+            const language = lang ? `lang-${lang.trim()}` : 'lang-plaintext';
+            // Escape HTML entities within code block
+            const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return `<pre><code class="${language}">${escapedCode}</code></pre>`;
+        });
+
+        // Bold and Italic
+        html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
+        html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+
+        // Headers
+        html = html.replace(/^###### (.*$)/gim, '<h6>$1</h6>');
+        html = html.replace(/^##### (.*$)/gim, '<h5>$1</h5>');
+        html = html.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
+        html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+        html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+        html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+        // Lists (simple)
+        html = html.replace(/^- (.*$)/gim, '<li>$1</li>');
+        html = html.replace(/(\r\n|\r|\n)<li>/g, '\n<ul><li>');
+        html = html.replace(/<\/li>(\r\n|\r|\n)(?!<li|ul)/g, '</li></ul>\n');
+        // Handle numbered lists (simple)
+        html = html.replace(/(\d+)\. (.*$)/gim, '<li>$2</li>');
+        html = html.replace(/(\r\n|\r|\n)\d+\. /g, '\n<ol><li>');
+        html = html.replace(/<\/li>(\r\n|\r|\n)(?!\d+\.|<li|ol)/g, '</li></ol>\n');
+
+        // Horizontal Rule
+        html = html.replace(/^-{3,}/gim, '<hr>');
+
+        // Paragraphs (must be last before links)
+        html = html.split('\n').map(line => {
+            if (line.trim() === '' || line.startsWith('<h') || line.startsWith('<ul') || line.startsWith('<ol') || line.startsWith('<hr') || line.startsWith('<pre') || line.startsWith('</pre')) {
+                return line;
+            }
+            return `<p>${line}</p>`;
+        }).join('');
+        
+        // Remove empty P tags and extra list wrappers
+        html = html.replace(/<p><\/p>/g, '');
+        html = html.replace(/<\/ul>\n<ul>/g, '');
+        html = html.replace(/<\/ol>\n<ol>/g, '');
+
+        return html.trim();
+    }
+
+
+    /**
+     * Shows a transient message box instead of using alert().
+     * @param {string} message The message to display.
+     * @param {'info'|'success'|'error'} type The type of message.
+     */
+    function showMessage(message, type = 'info') {
+        const box = document.getElementById('message-box');
+        box.textContent = message;
+        
+        let color = 'var(--color-accent-blue)';
+        if (type === 'error') color = 'var(--color-error)'; 
+        if (type === 'success') color = 'var(--color-success)';
+
+        box.style.color = color;
+        box.style.opacity = 1;
+        
+        // Ensure the box is visible if it was hidden by the initial CSS
+        box.style.display = 'block'; 
+
+        setTimeout(() => {
+            box.style.opacity = 0;
+            // Optionally hide it completely after transition
+            setTimeout(() => {
+                box.style.display = 'none';
+            }, 500); 
+        }, 3000);
+    }
+    
+    // --- Chat and History Management (LocalStorage) ---
+
+    function saveChatsToLocalStorage() {
+        localStorage.setItem('chats', JSON.stringify(chats));
+        localStorage.setItem('currentChatId', currentChatId);
+    }
+
+    function loadChatHistory() {
+        chatHistory = chats[currentChatId] || [];
+        renderChatHistory();
+        updateChatTitle();
+    }
+
+    function updateChatTitle() {
+        const title = chatHistory.length > 0 ? chatHistory[0].parts[0].text.substring(0, 30) + '...' : 'New Chat';
+        document.getElementById('title').textContent = `Sopilot v3.0 - ${title}`;
+    }
+
+    function renderChatHistory() {
+        chatContainer.innerHTML = '';
+        chatHistory.forEach(msg => {
+            // Only render user and model messages
+            if (msg.role === 'user' || msg.role === 'model') {
+                appendMessage(msg.role, msg.parts[0].text, false);
+            }
+        });
+        scrollToBottom();
+    }
+    
+    function createNewChat() {
+        if (chatHistory.length > 0) {
+            chats[currentChatId] = chatHistory; // Save current chat
+        }
+        currentChatId = crypto.randomUUID();
+        chatHistory = [];
+        saveChatsToLocalStorage();
+        loadChatHistory();
+        userInput.value = '';
+        showMessage("New chat started!", 'success');
+        closeChatListModal();
+    }
+
+    // --- Message Rendering ---
+
+    function appendMessage(role, text, shouldScroll = true) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${role}-message`;
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+
+        const roleLabel = role === 'user' ? 'You' : 'Assistant';
+        contentDiv.innerHTML = `<h5>${roleLabel}</h5>${markdownToHtml(text)}`;
+        
+        messageDiv.appendChild(contentDiv);
+        chatContainer.appendChild(messageDiv);
+
+        if (shouldScroll) {
+            scrollToBottom();
+        }
+    }
+
+    function scrollToBottom() {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // --- API Call and Core Logic ---
+
+    async function callGeminiApi(prompt, chatHistory, systemInstruction) {
+        const fullApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+        let retries = 0;
+        const maxRetries = 3;
+        
+        while (retries < maxRetries) {
+            try {
+                const contents = [...chatHistory, { role: 'user', parts: [{ text: prompt }] }];
+                
+                const payload = {
+                    contents: contents,
+                    tools: [{ "google_search": {} }],
+                };
+
+                // Add system instruction if it's not null/empty
+                if (systemInstruction) {
+                    payload.systemInstruction = {
+                        parts: [{ text: systemInstruction }]
+                    };
+                }
+
+                const response = await fetch(fullApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    // Log detailed error response for debugging
+                    console.error('API Response Error Body:', errorBody);
+                    throw new Error(`API returned status ${response.status}`);
+                }
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    return candidate.content.parts[0].text;
+                } else if (result.promptFeedback?.blockReason) {
+                    return `Error: Response blocked due to ${result.promptFeedback.blockReason}.`;
+                } else {
+                    return "Error: Received an invalid response from the API.";
+                }
+
+            } catch (error) {
+                // Do not log retries as errors in the console as per instructions
+                retries++;
+                if (retries < maxRetries) {
+                    const delay = Math.pow(2, retries) * 1000;
+                    // Exponential backoff wait
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    console.error('Final API call failed:', error);
+                    return "Error: Failed to get a response after multiple retries.";
+                }
+            }
+        }
+    }
+    
+    // --- Main Send Handler ---
+
+    async function sendMessage(e) {
+        e.preventDefault();
+        
+        if (isWaitingForResponse) return;
+
+        const prompt = userInput.value.trim();
+        if (!prompt) return;
+
+        // Set state
+        isWaitingForResponse = true;
+        sendBtn.disabled = true;
+        userInput.value = '';
+        userInput.rows = 1;
+        typingIndicator.style.opacity = 1;
+        scrollToBottom();
+
+        // 1. Get the current agent's instruction
+        const currentAgent = getAgents().find(a => a.id === currentAgentId);
+        const agentInstruction = (currentAgent && currentAgent.instruction) || '';
+        
+        // 2. Add user message to history and UI
+        const userMessage = { role: 'user', parts: [{ text: prompt }] };
+        chatHistory.push(userMessage);
+        appendMessage(userMessage.role, userMessage.parts[0].text);
+        
+        try {
+            // 3. Call API with agent instruction
+            const responseText = await callGeminiApi(prompt, chatHistory, agentInstruction);
+
+            // 4. Process response
+            const assistantMessage = { role: 'model', parts: [{ text: responseText }] };
+            chatHistory.push(assistantMessage);
+            appendMessage(assistantMessage.role, assistantMessage.parts[0].text);
+            
+            // 5. Update chat title after first response
+            if (chatHistory.length === 2) {
+                updateChatTitle();
+            }
+
+        } catch (error) {
+            console.error('Gemini API call failed:', error);
+            // Append error message to chat
+            appendMessage('model', 'I apologize, but I encountered an error. Please try again.');
+        } finally {
+            // 6. Reset state and save
+            isWaitingForResponse = false;
+            sendBtn.disabled = false;
+            typingIndicator.style.opacity = 0;
+            chats[currentChatId] = chatHistory;
+            saveChatsToLocalStorage();
+            scrollToBottom();
+        }
+    }
+    
+    // --- Initial Setup and Event Listeners ---
+    
+    function setupForm() {
+        messageForm.addEventListener('submit', sendMessage);
+
+        userInput.addEventListener('input', () => {
+            userInput.rows = 1;
+            const maxRows = 5;
+            const newRows = Math.min(maxRows, Math.ceil(userInput.scrollHeight / parseFloat(getComputedStyle(userInput).lineHeight)));
+            userInput.rows = newRows;
+            sendBtn.disabled = isWaitingForResponse || userInput.value.trim() === '';
+        });
+        
+        // Enable send button for initial load state
+        sendBtn.disabled = false;
+    }
+
+
+    // --- Chat List Modal Handlers ---
+
+    function renderChatList() {
+        chatListContainer.innerHTML = '';
+        const chatIds = Object.keys(chats).sort((a, b) => {
+            // Note: Timestamps were not explicitly added to the chat messages in the prior version,
+            // so sorting by index length or creation order is a safe fallback.
+            // Sorting alphabetically by ID (which is UUID) or simply by the last accessed one first is fine.
+            return a.localeCompare(b);
+        });
+
+        chatIds.forEach(id => {
+            const chat = chats[id];
+            if (chat.length === 0) return; // Skip empty chats
+
+            const title = chat[0].parts[0].text.substring(0, 40) + '...';
+            const item = document.createElement('div');
+            item.className = `chat-item ${id === currentChatId ? 'active' : ''}`;
+            item.dataset.id = id;
+            item.innerHTML = `
+                <span class="truncate pr-2">${title}</span>
+                <button data-id="${id}" data-action="delete" title="Delete Chat">&times;</button>
+            `;
+            chatListContainer.appendChild(item);
+        });
+
+        if (chatIds.length === 0) {
+             chatListContainer.innerHTML = '<p class="text-center italic opacity-70">No saved chats found.</p>';
+        }
+    }
+
+    function openChatListModal() {
+        renderChatList();
+        chatListModal.classList.remove('hidden');
+    }
+
+    function closeChatListModal() {
+        chatListModal.classList.add('hidden');
+    }
+
+    function handleChatListClick(e) {
+        const item = e.target.closest('.chat-item');
+        const btn = e.target.closest('button');
+
+        if (btn && btn.dataset.action === 'delete') {
+            const idToDelete = btn.dataset.id;
+            delete chats[idToDelete];
+            saveChatsToLocalStorage();
+            if (idToDelete === currentChatId) {
+                createNewChat(); // Start new chat if current one is deleted
+            } else {
+                renderChatList();
+                showMessage("Chat deleted.", 'success');
+            }
+        } else if (item && item.dataset.id) {
+            chats[currentChatId] = chatHistory; // Save current state
+            currentChatId = item.dataset.id;
+            saveChatsToLocalStorage();
+            loadChatHistory();
+            closeChatListModal();
+        }
+    }
+    
+    function handleClearAllChats() {
+        if (Object.keys(chats).length === 0 && chatHistory.length === 0) {
+            showMessage("No chats to clear.", 'info');
+            return;
+        }
+
+        // Use the custom message box for confirmation style
+        const confirmationMessage = "Are you sure you want to clear ALL saved chats? This action cannot be undone.";
+        
+        showMessage(confirmationMessage, 'error');
+        
+        // For this task, we proceed if user clicks the button.
+        chats = {};
+        createNewChat(); // This also saves the empty state
+        showMessage("All chats cleared and new chat started.", 'success');
+        closeChatListModal();
+    }
+
+
+    // --- AGENT MANAGEMENT FUNCTIONS ---
+
+    function getAgents() {
+        try {
+            const agents = JSON.parse(localStorage.getItem('aiAgents') || '[]');
+            // Always ensure the default is included, but only saved ones in localStorage
+            if (!agents.find(a => a.id === 'default')) {
+                agents.unshift({id: 'default', name: 'Default Agent', instruction: ''});
+            }
+            return agents;
+        } catch (e) {
+            console.error("Error loading agents from localStorage:", e);
+            return [{id: 'default', name: 'Default Agent', instruction: ''}];
+        }
+    }
+
+    function saveAgents(agents) {
+        // Filter out the 'default' agent before saving to keep localStorage clean
+        const agentsToSave = agents.filter(a => a.id !== 'default');
+        localStorage.setItem('aiAgents', JSON.stringify(agentsToSave));
+    }
+
+    function saveSelectedAgentId(id) {
+        localStorage.setItem('selectedAgentId', id);
+        currentAgentId = id;
+    }
+
+    function loadSelectedAgentId() {
+        currentAgentId = localStorage.getItem('selectedAgentId') || 'default';
+    }
+
+    function renderAgentsList() {
+        const agents = getAgents();
+        const listEl = document.getElementById('agents-list');
+        const currentAgent = agents.find(a => a.id === currentAgentId) || agents[0];
+        
+        document.getElementById('current-agent-name').textContent = 
+            currentAgent.id === 'default' ? 'Default (No System Instruction)' : currentAgent.name;
+
+        listEl.innerHTML = '';
+
+        agents.forEach(agent => {
+            const isDefault = agent.id === 'default';
+            // Only show 'Default' in the list for selection, not for editing/deleting
+            if (!isDefault) {
+                 const instructionSnippet = agent.instruction.substring(0, 50) + '...';
+                 const item = document.createElement('div');
+                 item.className = `agent-item ${agent.id === currentAgentId ? 'active' : ''}`;
+                 item.dataset.id = agent.id;
+                 item.innerHTML = `
+                      <div style="flex-grow: 1; overflow: hidden;">
+                          <div style="font-weight: 600;">${agent.name}</div>
+                          <div style="font-size: 0.8rem; opacity: 0.7; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">${instructionSnippet}</div>
+                      </div>
+                      <div style="flex-shrink: 0;">
+                          <button data-agent-id="${agent.id}" data-action="edit" title="Edit Agent" class="p-1 rounded bg-color-form-bg/50">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                          </button>
+                          <button data-agent-id="${agent.id}" data-action="select" title="Select Agent" class="p-1 rounded bg-color-form-bg/50 ml-1">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                          </button>
+                          <button data-agent-id="${agent.id}" data-action="delete" title="Delete Agent" class="p-1 rounded bg-color-form-bg/50 ml-1">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                          </button>
+                      </div>
+                 `;
+                 listEl.appendChild(item);
+            }
+        });
+        
+        // Always show 'Default' option manually at the top for selection
+        const defaultAgentDiv = document.createElement('div');
+        defaultAgentDiv.className = `agent-item ${currentAgentId === 'default' ? 'active' : ''}`;
+        defaultAgentDiv.innerHTML = `
+            <div style="flex-grow: 1;">
+                <div style="font-weight: 600;">Default Agent</div>
+                <div style="font-size: 0.8rem; opacity: 0.7;">No System Instruction active.</div>
+            </div>
+            <button data-agent-id="default" data-action="select" title="Select Default Agent" class="p-1 rounded bg-color-form-bg/50 ml-1" style="flex-shrink: 0;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+        `;
+        listEl.prepend(defaultAgentDiv);
+
+
+        // Re-attach event listeners after re-rendering
+        listEl.querySelectorAll('[data-action="select"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectAgent(e.currentTarget.dataset.agentId);
+            });
+        });
+        listEl.querySelectorAll('[data-action="edit"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                editAgent(e.currentTarget.dataset.agentId);
+            });
+        });
+        listEl.querySelectorAll('[data-action="delete"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteAgent(e.currentTarget.dataset.agentId);
+            });
+        });
+    }
+
+    function openAgentsModal() {
+        loadSelectedAgentId();
+        renderAgentsList();
+        clearAgentForm();
+        agentsModal.classList.remove('hidden');
+    }
+
+    function closeAgentsModal() {
+        agentsModal.classList.add('hidden');
+    }
+    
+    function clearAgentForm() {
+        document.getElementById('agent-id').value = '';
+        document.getElementById('agent-name').value = '';
+        document.getElementById('agent-instruction').value = '';
+        document.getElementById('save-agent-btn').textContent = 'Save Agent';
+    }
+
+    function editAgent(id) {
+        const agents = getAgents();
+        const agentToEdit = agents.find(a => a.id === id);
+        if (agentToEdit) {
+            document.getElementById('agent-id').value = agentToEdit.id;
+            document.getElementById('agent-name').value = agentToEdit.name;
+            document.getElementById('agent-instruction').value = agentToEdit.instruction;
+            document.getElementById('save-agent-btn').textContent = 'Update Agent';
+        }
+    }
+
+    function selectAgent(id) {
+        saveSelectedAgentId(id);
+        const agent = getAgents().find(a => a.id === id);
+        showMessage(`Agent selected: ${agent ? agent.name : 'Default'}`, 'info');
+        renderAgentsList(); // Re-render to show active state
+        closeAgentsModal(); // Close modal after selection
+    }
+
+    function deleteAgent(id) {
+        if (id === 'default') {
+            showMessage("Cannot delete the Default Agent.", 'error');
+            return;
+        }
+
+        const agents = getAgents().filter(a => a.id !== id);
+        saveAgents(agents);
+        showMessage(`Agent deleted successfully!`, 'success');
+        
+        // If the deleted agent was active, switch to default
+        if (currentAgentId === id) {
+            selectAgent('default');
+        } else {
+            renderAgentsList();
+        }
+    }
+
+    function setupAgentForm() {
+        agentForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('agent-id').value || crypto.randomUUID();
+            const name = document.getElementById('agent-name').value.trim();
+            const instruction = document.getElementById('agent-instruction').value.trim();
+
+            if (!name || !instruction) {
+                showMessage("Both Agent Name and System Instruction are required.", 'error');
+                return;
+            }
+
+            const newAgent = { id, name, instruction };
+            let agents = getAgents().filter(a => a.id !== 'default'); // Start with only user-defined agents
+            
+            // Check if agent exists (editing) or is new
+            const existingIndex = agents.findIndex(a => a.id === id);
+            
+            if (existingIndex > -1) {
+                agents[existingIndex] = newAgent;
+                showMessage(`Agent '${name}' updated!`, 'success');
+            } else {
+                agents.push(newAgent);
+                showMessage(`Agent '${name}' created!`, 'success');
+            }
+
+            saveAgents(agents);
+            renderAgentsList();
+            clearAgentForm();
+        });
+
+        clearAgentFormBtn.addEventListener('click', clearAgentForm);
+    }
+
+    // --- Theme Toggle (Preserving existing logic) ---
+
+    let currentTheme = localStorage.getItem('theme') || 'default';
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+
+    const themes = {
+        'default': {
+            '--color-primary-dark': 'rgb(2, 8, 20)',
+            '--color-accent-blue': 'rgb(0, 255, 224)',
+            '--color-input-placeholder': 'lime',
+        },
+        'red-fire': {
+            '--color-primary-dark': 'rgb(20, 0, 0)',
+            '--color-accent-blue': 'rgb(255, 100, 100)',
+            '--color-input-placeholder': 'rgb(255, 200, 0)',
+        }
+        // Add more themes here if needed
+    };
+
+    function applyTheme(themeName) {
+        const root = document.documentElement;
+        const theme = themes[themeName] || themes['default'];
+        for (const [key, value] of Object.entries(theme)) {
+            root.style.setProperty(key, value);
+        }
+        localStorage.setItem('theme', themeName);
+        currentTheme = themeName;
+    }
+
+    function toggleTheme() {
+        const nextTheme = currentTheme === 'default' ? 'red-fire' : 'default';
+        applyTheme(nextTheme);
+    }
+    
+    // --- Initialize ---
+
+    function initialize() {
+        // Load and apply theme
+        applyTheme(currentTheme);
+
+        // Load chat history
+        if (!chats[currentChatId] && Object.keys(chats).length > 0) {
+             currentChatId = Object.keys(chats)[0]; // Fallback to first chat
+             saveChatsToLocalStorage();
+        }
+        if (!chats[currentChatId]) {
+            chats[currentChatId] = [];
+        }
+        loadChatHistory();
+        
+        // Load selected agent
+        loadSelectedAgentId();
+        
+        // Setup Form and Listeners
+        setupForm();
+
+        // Chat List Modal Listeners
+        openChatsBtn.addEventListener('click', openChatListModal);
+        closeChatsBtn.addEventListener('click', closeChatListModal);
+        chatListContainer.addEventListener('click', handleChatListClick);
+        newChatBtn.addEventListener('click', createNewChat);
+        clearAllChatsBtn.addEventListener('click', handleClearAllChats);
+        
+        // Agent Modal Listeners
+        openAgentsBtn.addEventListener('click', openAgentsModal);
+        closeAgentsModalBtn.addEventListener('click', closeAgentsModal);
+        setupAgentForm(); // Setup form submit and clear listeners
+        
+        // Theme Toggle Listener
+        themeToggleBtn.addEventListener('click', toggleTheme);
+    }
+
+    // Protection against code injection and console usage (retained from v2.9)
+    document.addEventListener("keydown", function (e) {
+      if (
+        (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'I' || e.key === 'C')) ||
+        (e.ctrlKey && ['I', 'C'].includes(e.key)) ||
+        (e.ctrlKey && e.key === 'U')
+      ) {
+        e.preventDefault();
+      }
+    });
+
+    document.addEventListener("contextmenu", function (e) {
+      e.preventDefault();
+    });
+
+    Object.defineProperty(window, 'eruda', {
+      configurable: true,
+      get: function () {
+        console.log("🔒 Eruda access blocked");
+        return undefined;
+      },
+      set: function () {
+        console.log("🔒 Eruda injection attempt blocked");
+      }
+    });
+
+    setInterval(() => {
+      try {
+        if (window.eruda) {
+          window.eruda.destroy();
+          console.log("🚫 Eruda neutralized");
+        }
+        const el = document.getElementById('eruda-container');
+        if (el) {
+          el.remove();
+          console.log("🧹 Eruda DOM removed");
+        }
+      } catch (err) {
+        console.warn("⚠️ Eruda defense error:", err);
+      }
+    }, 1000);
+
+    // Run initialization
+    initialize();
+
+  </script>
+</body>
+</html>
